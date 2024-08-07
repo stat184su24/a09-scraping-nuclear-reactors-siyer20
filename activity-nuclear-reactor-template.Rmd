@@ -1,6 +1,6 @@
 ---
 title: "Activity: Nuclear Reactors"
-author: "YOUR NAME HERE"
+author: "Sangeeta Iyer"
 output: html_notebook
 ---
 
@@ -13,29 +13,106 @@ library(tidyverse)
 
 ```{r}
 #My code here.... 
+library(rvest)
 
+page <- "https://en.wikipedia.org/wiki/List_of_commercial_nuclear_reactors"
+tableList <- page %>%
+  read_html() %>%
+  html_nodes(css = "table") %>%
+  html_table(fill = TRUE)
 
+head(tableList[[21]])
+Japan <- tableList[[21]]
+Japan
+
+Japan <-
+  Japan %>%
+  filter(row_number() > 1) %>%
+  rename(name = Plantname, 
+         reactor = `UnitNo.`,
+         model = Model,
+         status = Status, 
+         netMW = `Capacity(MW)`,
+         construction = Beginbuilding,
+         operation = Commercialoperation, 
+         closure = Closed)
+
+str(Japan)
+Japan
+
+```
+```{r}
+Japan <- Japan %>%
+  mutate(
+    reactor = as.character(reactor),
+    construction = lubridate::dmy(construction),
+    operation = lubridate::dmy(operation),
+    closure = lubridate::dmy(closure)
+  )
+
+Japan
 ```
 
 
 ## Your turn: In what ways is the table tidy? How is it not tidy? What’s different about it from a tidy table?
 
 My answer here..... 
+Each row seems to represent one case, a reactor, which is tidy. However, some of the variables names appear repetitive or are multiple words long, which is not tidy.   
+
 
 
 ## Your Turn: Plot Net Generation Capacity vs Construction Date
 
 ```{r}
 #my code here 
+Japan
 
+
+ggplot(Japan) +
+  aes(x = construction, y = netMW, colour = Type) +
+  geom_point() +
+  scale_color_hue(direction = 1) +
+  theme_minimal()
 
 ```
-
 
 ## Your Turn: Scrape & Clean China Data (then merge with Japan)
 
 ```{r}
 #my code here... 
+
+china <- tableList[[10]]
+
+china
+
+china <-
+  china %>%
+  filter(row_number() > 1) %>%
+  rename(name = Plantname, 
+         reactor = `UnitNo.`,
+         model = Model,
+         status = Status, 
+         netMW = `Capacity(MW)`,
+         construction = Beginbuilding,
+         operation = Commercialoperation, 
+         closure = Closed)
+
+
+china <- china %>%
+  mutate(
+    construction = lubridate::dmy(construction),
+    operation = lubridate::dmy(operation),
+    country = 'China'
+  )
+china
+
+Japan <- Japan %>%
+  mutate(
+    country = 'Japan'
+  )
+
+JapanChina <- rbind(Japan, china)
+JapanChina
 
 ```
 
@@ -45,5 +122,12 @@ My answer here.....
 
 ```{r}
 #My code here
+Japan <- Japan %>%
+  mutate(reactorid = paste(name, reactor))
 
+
+ggplot(Japan) +
+  geom_segment(data = Japan, mapping = aes(x = construction, y = reactorid, xend = operation, color = Type)) +
+  scale_color_hue(direction = 1) +
+  theme_minimal()
 ```
